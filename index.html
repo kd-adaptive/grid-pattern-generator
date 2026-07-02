@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pattern Grid Studio</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            gap: 0;
+        }
+
+        .canvas-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #111;
+            border-right: 1px solid #333;
+        }
+
+        .canvas-toolbar {
+            display: flex;
+            gap: 8px;
+            padding: 12px;
+            background: #1a1a1a;
+            border-bottom: 1px solid #333;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            padding: 0 8px;
+            border-right: 1px solid #333;
+        }
+
+        .toolbar-group:last-child {
+            border-right: none;
+        }
+
+        .canvas-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow: auto;
+            background: #0a0a0a;
+        }
+
+        svg {
+            min-width: 512px;
+            min-height: 288px;
+            max-width: 100%;
+            max-height: 100%;
+            border: 2px solid #333;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+            background: white;
+        }
+
+        .sidebar {
+            width: 380px;
+            background: #1a1a1a;
+            border-left: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid #333;
+        }
+
+        .sidebar-header h2 {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid #333;
+            background: #141414;
+            overflow-x: auto;
+        }
+
+        .tab {
+            flex: 1;
+            min-width: 70px;
+            padding: 10px;
+            border: none;
+            background: transparent;
+            color: #999;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .tab.active {
+            color: #4a9eff;
+            border-bottom-color: #4a9eff;
+            background: #1a1a1a;
+        }
+
+        .tab:hover {
+            color: #bbb;
+        }
+
+        .tab-content {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .control-section {
+            border-bottom: 1px solid #333;
+            padding-bottom: 12px;
+        }
+
+        .control-section:last-child {
+            border-bottom: none;
+        }
+
+        .control-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .control-row:last-child {
+            margin-bottom: 0;
+        }
+
+        input[type="range"], input[type="number"], input[type="text"], select {
+            background: #0a0a0a;
+            border: 1px solid #333;
+            color: #e0e0e0;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: inherit;
+        }
+
+        input[type="range"]:focus, input[type="number"]:focus, select:focus {
+            outline: none;
+            border-color: #4a9eff;
+            box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.2);
+        }
+
+        input[type="range"] {
+            flex: 1;
+            height: 4px;
+            padding: 0;
+            cursor: pointer;
+        }
+
+        .value-label {
+            min-width: 45px;
+            text-align: right;
+            font-size: 12px;
+            color: #4a9eff;
+            font-weight: 500;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        button {
+            background: #0a0a0a;
+            border: 1px solid #333;
+            color: #e0e0e0;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        button:hover {
+            border-color: #4a9eff;
+            color: #4a9eff;
+        }
+
+        button.primary {
+            background: #4a9eff;
+            border-color: #4a9eff;
+            color: #000;
+        }
+
+        button.primary:hover {
+            background: #5aadff;
+        }
+
+        button.small {
+            padding: 6px 10px;
+            font-size: 11px;
+        }
+
+        .color-picker {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .color-swatch {
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .color-swatch:hover {
+            border-color: #4a9eff;
+        }
+
+        .palette-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+        }
+
+        .palette-btn {
+            padding: 8px 6px;
+            font-size: 10px;
+            text-align: center;
+        }
+
+        .info-text {
+            font-size: 11px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .grid-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(24px, 1fr));
+            gap: 2px;
+            margin: 8px 0;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .grid-cell {
+            aspect-ratio: 1;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            cursor: pointer;
+            font-size: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 2px;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .grid-cell:hover {
+            border-color: #4a9eff;
+            background: #252525;
+        }
+
+        .grid-cell.selected {
+            background: #4a9eff;
+            border-color: #4a9eff;
+            color: #000;
+            font-weight: 600;
+        }
+
+        .grid-cell.selected.merged {
+            background: linear-gradient(135deg, #4a9eff 0%, #1a4a7a 100%);
+            border-color: #7abfff;
+        }
+
+        .grid-cell.merged {
+            background: #1a4a7a !important;
+            border: 2px solid #4a9eff !important;
+            color: #4a9eff !important;
+            font-weight: 600;
+            box-shadow: inset 0 0 8px rgba(74, 158, 255, 0.3);
+        }
+
+        .export-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .history-list {
+            max-height: 200px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .history-item {
+            padding: 8px;
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s;
+        }
+
+        .history-item:hover {
+            border-color: #4a9eff;
+            background: #1a1a1a;
+        }
+
+        .history-item.current {
+            border-color: #4a9eff;
+            background: rgba(74, 158, 255, 0.1);
+        }
+
+        .button-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        input[type="color"] {
+            width: 45px;
+            height: 35px;
+            cursor: pointer;
+            border: 1px solid #333;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="canvas-area">
+            <div class="canvas-toolbar">
+                <div class="toolbar-group">
+                    <button id="undoBtn">↶ Undo</button>
+                    <button id="redoBtn">↷ Redo</button>
+                </div>
+                <div class="toolbar-group">
+                    <button id="clearBtn">Clear</button>
+                    <button id="resetBtn">Reset</button>
+                    <button id="randomAllBtn" style="background: #4a9eff; border-color: #4a9eff; color: #000;">Randomize All</button>
+                </div>
+                <div class="toolbar-group">
+                    <span id="gridInfo" style="font-size: 12px; color: #999;">Grid: 8x6</span>
+                </div>
+            </div>
+            <div class="canvas-container">
+                <svg id="patternSVG" viewBox="0 0 1024 576" xmlns="http://www.w3.org/2000/svg" style="width: 1024px; height: 576px;"></svg>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>Pattern Grid Studio</h2>
+            </div>
+
+            <div class="tabs">
+                <button class="tab active" data-tab="pattern">Pattern</button>
+                <button class="tab" data-tab="grid">Grid</button>
+                <button class="tab" data-tab="colors">Colors</button>
+                <button class="tab" data-tab="export">Export</button>
+            </div>
+
+            <!-- Pattern Tab -->
+            <div class="tab-content active" id="pattern-tab">
+                <div class="control-section">
+                    <label class="control-label">Algorithm</label>
+                    <select id="algorithm">
+                        <option value="perlin">Perlin Noise</option>
+                        <option value="voronoi">Voronoi</option>
+                        <option value="cellular">Cellular Automata</option>
+                        <option value="wave">Wave</option>
+                        <option value="fractal">Fractal</option>
+                        <option value="grid">Grid Pattern</option>
+                        <option value="radial">Radial</option>
+                        <option value="spiral">Spiral</option>
+                        <option value="noise">Simplex Noise</option>
+                        <option value="stripes">Stripes</option>
+                        <option value="checkerboard">Checkerboard</option>
+                        <option value="diamond">Diamond</option>
+                        <option value="rings">Rings</option>
+                        <option value="random">Random</option>
+                        <option value="turbulence">Turbulence</option>
+                        <option value="marble">Marble</option>
+                        <option value="wood">Wood</option>
+                        <option value="plasma">Plasma</option>
+                        <option value="strata">Strata</option>
+                        <option value="wave2">Wave 2</option>
+                        <option value="sine">Sine Wave</option>
+                    </select>
+                    <p class="info-text">Affects color distribution across grid</p>
+                </div>
+
+                <div class="control-section">
+                    <label class="control-label">Seed</label>
+                    <div class="control-row">
+                        <input type="number" id="seed" value="12345" style="flex: 1;">
+                        <button id="randomSeedBtn" class="small">Random</button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Grid Tab -->
+            <div class="tab-content" id="grid-tab">
+                <div class="control-section">
+                    <label class="control-label">Grid Width</label>
+                    <div class="control-row">
+                        <input type="range" id="gridWidthSlider" min="2" max="32" value="8">
+                        <span class="value-label" id="gridWidthVal">8</span>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <label class="control-label">Grid Height</label>
+                    <div class="control-row">
+                        <input type="range" id="gridHeightSlider" min="2" max="32" value="6">
+                        <span class="value-label" id="gridHeightVal">6</span>
+                    </div>
+                    <button class="small" id="randomDimensionsBtn" style="width: 100%; margin-top: 8px;">Randomize Dimensions</button>
+                </div>
+
+                <div class="control-section">
+                    <label class="control-label">Complexity (Grid Scale)</label>
+                    <div class="control-row">
+                        <input type="range" id="complexity" min="5" max="10" value="5">
+                        <span class="value-label" id="complexityVal">5</span>
+                    </div>
+                    <p class="info-text">Zooms in to show pattern detail</p>
+                </div>
+
+                <div class="control-section">
+                    <label class="control-label">Cell Variation</label>
+                    <div class="control-row">
+                        <input type="range" id="cellVariation" min="0" max="100" value="0">
+                        <span class="value-label" id="cellVariationVal">0%</span>
+                    </div>
+                    <p class="info-text">Varies colors within the grid</p>
+                </div>
+
+                <div class="control-section">
+                    <label class="control-label">Grid Line Stroke</label>
+                    <div class="control-row">
+                        <input type="range" id="gridStroke" min="0.1" max="3" step="0.1" value="0.5">
+                        <span class="value-label" id="gridStrokeVal">0.5px</span>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <label class="control-label">Grid Line Color</label>
+                    <div class="control-row">
+                        <input type="color" id="gridLineColor" value="#ffffff">
+                        <input type="text" id="gridLineColorText" value="#ffffff" style="flex: 1;">
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <label class="control-label">Display</label>
+                    <label>
+                        <input type="checkbox" id="gridLinesCheck" checked>
+                        Show Grid Lines
+                    </label>
+                </div>
+
+                <div class="control-section">
+                    <label class="control-label">Merge Cells</label>
+                    <div class="grid-selector" id="gridSelector"></div>
+                    <div style="display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap;">
+                        <button id="mergeBtn" class="small">Merge</button>
+                        <button id="clearSelectionBtn" class="small">Clear</button>
+                        <button id="unmergeBtn" class="small">Unmerge All</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Colors Tab -->
+            <div class="tab-content" id="colors-tab">
+                <div class="control-section">
+                    <label class="control-label">Palette Color Count</label>
+                    <div class="control-row">
+                        <input type="range" id="colorCount" min="2" max="8" value="5">
+                        <span class="value-label" id="colorCountVal">5</span>
+                    </div>
+                    <p class="info-text">Number of colors in active palette</p>
+                </div>
+
+                <div class="control-section">
+                    <label class="control-label">Color Palettes</label>
+                    <div class="palette-grid">
+                        <button class="palette-btn" data-palette="sunglow">Sun Glow</button>
+                        <button class="palette-btn" data-palette="sunglowwarm">Glow Warm</button>
+                        <button class="palette-btn" data-palette="sunglowyellow">Glow Yellow</button>
+                        <button class="palette-btn" data-palette="sunglowsoft">Glow Soft</button>
+                        <button class="palette-btn" data-palette="monochrome">Monochrome</button>
+                        <button class="palette-btn" data-palette="grayscale">Grayscale</button>
+                        <button class="palette-btn" data-palette="bluegreen">Blue-Green</button>
+                        <button class="palette-btn" data-palette="redorange">Red-Orange</button>
+                        <button class="palette-btn" data-palette="yellowbrown">Yellow-Brown</button>
+                        <button class="palette-btn" data-palette="greenblue">Green-Blue</button>
+                        <button class="palette-btn" data-palette="purplepink">Purple-Pink</button>
+                        <button class="palette-btn" data-palette="browntan">Brown-Tan</button>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <label class="control-label">Generate Palette</label>
+                    <div class="control-row">
+                        <input type="color" id="baseColor" value="#4a9eff" style="width: 45px; height: 35px;">
+                        <button class="small" id="generatePaletteBtn" style="flex: 1;">Generate from Color</button>
+                    </div>
+                    <p class="info-text">Creates harmonious palette from base color</p>
+                </div>
+
+                <div class="control-section">
+                    <label class="control-label">Active Palette</label>
+                    <div class="color-picker" id="colorPicker"></div>
+                    <button class="small primary" id="randomizeColorsBtn" style="width: 100%; margin-top: 8px;">Randomize Colors</button>
+                </div>
+
+                <div class="control-section">
+                    <label class="control-label">Background</label>
+                    <div class="control-row">
+                        <input type="color" id="backgroundColor" value="#ffffff">
+                        <input type="text" id="bgColorText" value="#ffffff" style="flex: 1;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export Tab -->
+            <div class="tab-content" id="export-tab">
+                <div class="control-section">
+                    <label class="control-label">Canvas Size</label>
+                    <div class="grid-2">
+                        <div>
+                            <label style="font-size: 10px; color: #999; display: block; margin-bottom: 4px;">Width</label>
+                            <input type="number" id="exportWidth" value="1024" min="256" step="256">
+                        </div>
+                        <div>
+                            <label style="font-size: 10px; color: #999; display: block; margin-bottom: 4px;">Height</label>
+                            <input type="number" id="exportHeight" value="576" min="256" step="256">
+                        </div>
+                    </div>
+                    <div class="grid-2" style="margin-top: 8px;">
+                        <button class="small" data-size="small">Small (512x288)</button>
+                        <button class="small" data-size="medium">Medium (1024x576)</button>
+                        <button class="small" data-size="large">Large (2048x1152)</button>
+                        <button class="small" data-size="print">Print (4096x2304)</button>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <label class="control-label">Export</label>
+                    <div class="button-row">
+                        <button class="primary" id="exportSVG">SVG (Editable)</button>
+                        <button class="primary" id="exportPNG">PNG</button>
+                    </div>
+                    <button class="small" id="copyBtn" style="width: 100%; margin-top: 8px;">Copy to Clipboard</button>
+                </div>
+
+                <div class="control-section">
+                    <label class="control-label">History</label>
+                    <div class="history-list" id="historyList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const svg = document.getElementById('patternSVG');
+
+        let state = {
+            algorithm: 'perlin',
+            seed: 12345,
+            complexity: 5,
+            gridWidth: 8,
+            gridHeight: 6,
+            cellVariation: 0,
+            colorCount: 5,
+            colors: ['#FFFDC9', '#FFFAA5', '#FFED4E', '#FFD700', '#F0C000'],
+            backgroundColor: '#ffffff',
+            gridLineColor: '#ffffff',
+            gridLines: true,
+            gridStroke: 0.5,
+            mergeCells: []  // Array of {mainCell, cells: []}
+        };
+
+        let history = [];
+        let historyIndex = -1;
+        let selectedCells = new Set();
+
+        const colorPalettes = {
+            sunglow: ['#FFFDC9', '#FFE066', '#FFD700', '#FFA500', '#FF8C00', '#D4A017', '#C19A00', '#8B6914'],
+            sunglowwarm: ['#FFFDDC', '#FFD699', '#FFC300', '#FF9D00', '#FF6F00', '#E65100', '#CC4400', '#994433'],
+            sunglowyellow: ['#FFFFF0', '#FFFFCC', '#FFFF00', '#FFDD00', '#FFBB00', '#FF9900', '#FF7700', '#DD5500'],
+            sunglowsoft: ['#FFFFF5', '#FFFACD', '#FFE680', '#FFD966', '#FFC74D', '#FF9A3D', '#FF7030', '#D4511E'],
+            monochrome: ['#FFFFFF', '#E0E0E0', '#BFBFBF', '#808080', '#505050', '#303030', '#1A1A1A', '#000000'],
+            grayscale: ['#F5F5F5', '#D3D3D3', '#A9A9A9', '#696969', '#404040', '#262626', '#0D0D0D', '#1C1C1C'],
+            bluegreen: ['#E0FFFF', '#4ECDC4', '#20B2AA', '#008B8B', '#006666', '#1B4D4E', '#003333', '#001A1A'],
+            redorange: ['#FFE4E1', '#FF6347', '#FF4500', '#DC143C', '#8B0000', '#660000', '#4D0000', '#330000'],
+            yellowbrown: ['#FFFFE0', '#F0E68C', '#DAA520', '#B8860B', '#654321', '#4A2F1A', '#2F1A0D', '#1A0F00'],
+            greenblue: ['#E0F8FF', '#00CED1', '#008B8B', '#2E5266', '#155E75', '#0C2D48', '#051E3E', '#000814'],
+            purplepink: ['#FFE4FF', '#DA70D6', '#DA70D6', '#9932CC', '#663399', '#4B0082', '#240046', '#10002B'],
+            browntan: ['#F5DEB3', '#D2B48C', '#CD853F', '#8B4513', '#5C4033', '#3E2723', '#2C1810', '#1A0F08']
+        };
+
+        function init() {
+            setupEventListeners();
+            initColorPicker();
+            updateGridSelector();
+            updatePattern();
+            saveToHistory();
+        }
+
+        function setupEventListeners() {
+            document.getElementById('algorithm').addEventListener('change', () => updatePattern());
+            document.getElementById('complexity').addEventListener('input', (e) => {
+                state.complexity = parseInt(e.target.value);
+                document.getElementById('complexityVal').textContent = state.complexity;
+                updatePattern();
+            });
+            document.getElementById('randomSeedBtn').addEventListener('click', () => {
+                state.seed = Math.floor(Math.random() * 1000000);
+                document.getElementById('seed').value = state.seed;
+                updatePattern();
+            });
+
+            document.getElementById('gridWidthSlider').addEventListener('input', (e) => {
+                state.gridWidth = parseInt(e.target.value);
+                document.getElementById('gridWidthVal').textContent = state.gridWidth;
+                selectedCells.clear();
+                state.mergeCells = [];
+                updateGridSelector();
+                updatePattern();
+                saveToHistory();
+            });
+            document.getElementById('gridHeightSlider').addEventListener('input', (e) => {
+                state.gridHeight = parseInt(e.target.value);
+                document.getElementById('gridHeightVal').textContent = state.gridHeight;
+                selectedCells.clear();
+                state.mergeCells = [];
+                updateGridSelector();
+                updatePattern();
+                saveToHistory();
+            });
+            document.getElementById('cellVariation').addEventListener('input', (e) => {
+                state.cellVariation = parseInt(e.target.value);
+                document.getElementById('cellVariationVal').textContent = state.cellVariation + '%';
+                updatePattern();
+            });
+            document.getElementById('gridStroke').addEventListener('input', (e) => {
+                state.gridStroke = parseFloat(e.target.value);
+                document.getElementById('gridStrokeVal').textContent = state.gridStroke + 'px';
+                updatePattern();
+            });
+
+            document.getElementById('gridLineColor').addEventListener('change', (e) => {
+                state.gridLineColor = e.target.value;
+                document.getElementById('gridLineColorText').value = e.target.value;
+                updatePattern();
+            });
+
+            document.getElementById('gridLinesCheck').addEventListener('change', (e) => {
+                state.gridLines = e.target.checked;
+                updatePattern();
+            });
+
+            document.getElementById('mergeBtn').addEventListener('click', mergeCells);
+            document.getElementById('clearSelectionBtn').addEventListener('click', () => {
+                selectedCells.clear();
+                updateGridSelector();
+            });
+            document.getElementById('unmergeBtn').addEventListener('click', () => {
+                state.mergeCells = [];
+                updateGridSelector();
+                updatePattern();
+                saveToHistory();
+            });
+
+            document.getElementById('colorCount').addEventListener('input', (e) => {
+                state.colorCount = parseInt(e.target.value);
+                document.getElementById('colorCountVal').textContent = state.colorCount;
+                updateColorPicker();
+                updatePattern();
+            });
+
+            document.getElementById('randomizeColorsBtn').addEventListener('click', randomizeColors);
+            document.getElementById('randomDimensionsBtn').addEventListener('click', randomizeDimensions);
+            document.getElementById('generatePaletteBtn').addEventListener('click', generatePaletteFromColor);
+
+            document.getElementById('backgroundColor').addEventListener('change', (e) => {
+                state.backgroundColor = e.target.value;
+                document.getElementById('bgColorText').value = e.target.value;
+                updatePattern();
+            });
+
+            document.getElementById('undoBtn').addEventListener('click', undo);
+            document.getElementById('redoBtn').addEventListener('click', redo);
+            document.getElementById('clearBtn').addEventListener('click', clearCanvas);
+            document.getElementById('resetBtn').addEventListener('click', resetState);
+            document.getElementById('randomAllBtn').addEventListener('click', randomizeAll);
+            document.getElementById('exportSVG').addEventListener('click', exportSVG);
+            document.getElementById('exportPNG').addEventListener('click', exportPNG);
+            document.getElementById('copyBtn').addEventListener('click', copyToClipboard);
+
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    e.target.classList.add('active');
+                    document.getElementById(e.target.dataset.tab + '-tab').classList.add('active');
+                });
+            });
+
+            document.querySelectorAll('[data-palette]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const palette = e.target.dataset.palette;
+                    state.colors = colorPalettes[palette].slice(0, state.colorCount);
+                    updateColorPicker();
+                    updatePattern();
+                    saveToHistory();
+                });
+            });
+
+            document.querySelectorAll('[data-size]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const sizes = {
+                        small: [512, 288],
+                        medium: [1024, 576],
+                        large: [2048, 1152],
+                        print: [4096, 2304]
+                    };
+                    const [w, h] = sizes[e.target.dataset.size];
+                    document.getElementById('exportWidth').value = w;
+                    document.getElementById('exportHeight').value = h;
+                });
+            });
+        }
+
+        function initColorPicker() {
+            updateColorPicker();
+        }
+
+        function updateColorPicker() {
+            const picker = document.getElementById('colorPicker');
+            picker.innerHTML = '';
+            const displayColors = state.colors.slice(0, state.colorCount);
+            displayColors.forEach((color, i) => {
+                const swatch = document.createElement('div');
+                swatch.className = 'color-swatch';
+                swatch.style.backgroundColor = color;
+                swatch.addEventListener('click', () => {
+                    const input = document.createElement('input');
+                    input.type = 'color';
+                    input.value = color;
+                    input.addEventListener('change', (e) => {
+                        state.colors[i] = e.target.value;
+                        updateColorPicker();
+                        updatePattern();
+                        saveToHistory();
+                    });
+                    input.click();
+                });
+                picker.appendChild(swatch);
+            });
+        }
+
+        function updateGridSelector() {
+            const selector = document.getElementById('gridSelector');
+            selector.innerHTML = '';
+            const totalCells = state.gridWidth * state.gridHeight;
+
+            for (let i = 0; i < totalCells; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'grid-cell';
+                cell.textContent = i + 1;
+
+                if (isCellMerged(i)) {
+                    cell.classList.add('merged');
+                }
+                if (selectedCells.has(i)) {
+                    cell.classList.add('selected');
+                }
+
+                cell.addEventListener('click', () => {
+                    if (selectedCells.has(i)) {
+                        selectedCells.delete(i);
+                    } else {
+                        selectedCells.add(i);
+                    }
+                    updateGridSelector();
+                });
+
+                selector.appendChild(cell);
+            }
+        }
+
+        function getMergeCellGroup(cellId) {
+            return state.mergeCells.find(group => group.cells.includes(cellId));
+        }
+
+        function isCellMerged(cellId) {
+            return getMergeCellGroup(cellId) !== undefined;
+        }
+
+        function mergeCells() {
+            if (selectedCells.size < 2) {
+                alert('Select at least 2 cells to merge');
+                return;
+            }
+
+            // Get the first selected cell as the main cell
+            const selectedArray = Array.from(selectedCells);
+            const mainCell = selectedArray[0];
+
+            // Create a new merge group
+            state.mergeCells.push({
+                mainCell: mainCell,
+                cells: selectedArray
+            });
+
+            selectedCells.clear();
+            updateGridSelector();
+            updatePattern();
+            saveToHistory();
+        }
+
+        function randomizeColors() {
+            const hues = [];
+            for (let i = 0; i < state.colorCount; i++) {
+                hues.push(Math.floor(Math.random() * 360));
+            }
+            state.colors = hues.map(h => {
+                const s = Math.floor(Math.random() * 70) + 15;
+                const l = Math.floor(Math.random() * 60) + 25;
+                return hslToHex(h, s, l);
+            });
+            updateColorPicker();
+            updatePattern();
+            saveToHistory();
+        }
+
+        function hslToHex(h, s, l) {
+            s /= 100;
+            l /= 100;
+            const k = n => (n + h / 30) % 12;
+            const a = s * Math.min(l, 1 - l);
+            const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+            const toHex = n => {
+                const hex = Math.round(255 * f(n)).toString(16);
+                return hex.length === 1 ? '0' + hex : hex;
+            };
+            return '#' + [toHex(0), toHex(8), toHex(4)].join('');
+        }
+
+        function perlinNoise(x, y, seed) {
+            return Math.sin(x * 12.9898 + y * 78.233 + seed * 43758.5453) * 0.5 + 0.5;
+        }
+
+        function getColorForCell(cellIndex) {
+            const width = state.gridWidth;
+            const height = state.gridHeight;
+            const row = Math.floor(cellIndex / width);
+            const col = cellIndex % width;
+            const seed = state.seed;
+            const algo = document.getElementById('algorithm').value;
+
+            let value = 0;
+
+            if (algo === 'perlin') {
+                value = perlinNoise(col, row, seed) * 0.5 + 0.5;
+            } else if (algo === 'voronoi') {
+                value = Math.sin(col * 7.3 + row * 3.7 + seed) * 0.5 + 0.5;
+            } else if (algo === 'cellular') {
+                value = Math.sin(col * 4.3 + row * 7.9 + seed) * 0.5 + 0.5;
+            } else if (algo === 'wave') {
+                value = (Math.sin(col / Math.max(1, state.complexity * 0.5)) * Math.cos(row / Math.max(1, state.complexity * 0.5)) + 1) / 2;
+            } else if (algo === 'fractal') {
+                value = Math.abs(Math.sin(col * 0.1) * Math.cos(row * 0.1)) * 0.5 + 0.25;
+            } else if (algo === 'grid') {
+                value = ((col + row) % Math.max(1, state.complexity)) / Math.max(1, state.complexity);
+            } else if (algo === 'radial') {
+                const dx = col - width / 2;
+                const dy = row - height / 2;
+                value = Math.sqrt(dx * dx + dy * dy) / Math.max(width, height);
+            } else if (algo === 'spiral') {
+                const dx = col - width / 2;
+                const dy = row - height / 2;
+                const angle = Math.atan2(dy, dx);
+                value = (angle + Math.PI) / (2 * Math.PI);
+            } else if (algo === 'noise') {
+                value = perlinNoise(col * 2.3, row * 2.7, seed);
+            } else if (algo === 'stripes') {
+                value = (col % state.complexity) / state.complexity;
+            } else if (algo === 'checkerboard') {
+                value = ((col + row) % 2) === 0 ? 0 : 1;
+            } else if (algo === 'diamond') {
+                const dx = Math.abs(col - width / 2);
+                const dy = Math.abs(row - height / 2);
+                value = Math.min(1, (dx + dy) / Math.max(width, height));
+            } else if (algo === 'rings') {
+                const dx = col - width / 2;
+                const dy = row - height / 2;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                value = (Math.sin(dist * state.complexity * 0.5) + 1) / 2;
+            } else if (algo === 'random') {
+                value = Math.sin(col * 12.9898 + row * 78.233 + seed * 43758.5453) * 0.5 + 0.5;
+            } else if (algo === 'turbulence') {
+                value = Math.abs(Math.sin(col * 3.3) * Math.cos(row * 4.4) + Math.sin((col + row) * 2.2)) / 2;
+            } else if (algo === 'marble') {
+                value = Math.sin((col + Math.sin(row * 0.5)) * 0.5) * 0.5 + 0.5;
+            } else if (algo === 'wood') {
+                value = Math.sin((col * col + row * row) * 0.01 + seed) * 0.5 + 0.5;
+            } else if (algo === 'plasma') {
+                value = (Math.sin(col * 0.1) + Math.sin(row * 0.1) + Math.sin((col + row) * 0.05)) / 3 * 0.5 + 0.5;
+            } else if (algo === 'strata') {
+                value = (Math.sin(row * 0.3) + 1) / 2;
+            } else if (algo === 'wave2') {
+                value = Math.sin(col * 0.1) * Math.cos(row * 0.1) * 0.5 + 0.5;
+            } else if (algo === 'sine') {
+                value = (Math.sin(col * Math.PI / 10) + Math.sin(row * Math.PI / 10)) / 2 * 0.5 + 0.5;
+            }
+
+            if (state.cellVariation > 0) {
+                const variation = Math.sin(cellIndex * 123.456) * 0.5 + 0.5;
+                value = (value + variation * (state.cellVariation / 100)) / (1 + (state.cellVariation / 100));
+            }
+
+            const colorCount = Math.min(state.colorCount, state.colors.length);
+            const colorIndex = Math.floor(Math.min(value, 0.999) * colorCount);
+            return state.colors[colorIndex];
+        }
+
+        function updatePattern() {
+            svg.innerHTML = '';
+
+            const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            bg.setAttribute('width', 1024);
+            bg.setAttribute('height', 576);
+            bg.setAttribute('fill', state.backgroundColor);
+            svg.appendChild(bg);
+
+            // Grid always fills the entire canvas
+            const cellWidth = 1024 / state.gridWidth;
+            const cellHeight = 576 / state.gridHeight;
+
+            const renderedCells = new Set();
+
+            for (let row = 0; row < state.gridHeight; row++) {
+                for (let col = 0; col < state.gridWidth; col++) {
+                    const cellIndex = row * state.gridWidth + col;
+
+                    if (renderedCells.has(cellIndex)) continue;
+
+                    const mergeGroup = getMergeCellGroup(cellIndex);
+
+                    if (mergeGroup && mergeGroup.mainCell === cellIndex) {
+                        // Render mega cell for merged group
+                        const mainColor = getColorForCell(mergeGroup.mainCell);
+
+                        // Calculate bounding box for all merged cells
+                        let minRow = Math.floor(mergeGroup.mainCell / state.gridWidth);
+                        let maxRow = minRow;
+                        let minCol = mergeGroup.mainCell % state.gridWidth;
+                        let maxCol = minCol;
+
+                        mergeGroup.cells.forEach(cellId => {
+                            const r = Math.floor(cellId / state.gridWidth);
+                            const c = cellId % state.gridWidth;
+                            minRow = Math.min(minRow, r);
+                            maxRow = Math.max(maxRow, r);
+                            minCol = Math.min(minCol, c);
+                            maxCol = Math.max(maxCol, c);
+                        });
+
+                        const x = minCol * cellWidth;
+                        const y = minRow * cellHeight;
+                        const width = (maxCol - minCol + 1) * cellWidth;
+                        const height = (maxRow - minRow + 1) * cellHeight;
+
+                        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        rect.setAttribute('x', x);
+                        rect.setAttribute('y', y);
+                        rect.setAttribute('width', width);
+                        rect.setAttribute('height', height);
+                        rect.setAttribute('fill', mainColor);
+
+                        svg.appendChild(rect);
+
+                        // Mark all cells in this group as rendered
+                        mergeGroup.cells.forEach(cellId => renderedCells.add(cellId));
+                    } else if (!mergeGroup) {
+                        // Render normal cell
+                        const x = col * cellWidth;
+                        const y = row * cellHeight;
+                        const color = getColorForCell(cellIndex);
+
+                        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        rect.setAttribute('x', x);
+                        rect.setAttribute('y', y);
+                        rect.setAttribute('width', cellWidth);
+                        rect.setAttribute('height', cellHeight);
+                        rect.setAttribute('fill', color);
+
+                        svg.appendChild(rect);
+                        renderedCells.add(cellIndex);
+                    }
+                }
+            }
+
+            if (state.gridLines) {
+                // Draw horizontal lines, skipping between merged cells
+                for (let row = 1; row < state.gridHeight; row++) {
+                    for (let col = 0; col < state.gridWidth; col++) {
+                        const topCell = (row - 1) * state.gridWidth + col;
+                        const bottomCell = row * state.gridWidth + col;
+
+                        // Skip line if both cells are in same merge group
+                        const topGroup = getMergeCellGroup(topCell);
+                        const bottomGroup = getMergeCellGroup(bottomCell);
+                        if (topGroup && bottomGroup && topGroup === bottomGroup) continue;
+
+                        // Draw line segment
+                        const x1 = col * cellWidth;
+                        const x2 = (col + 1) * cellWidth;
+                        const y = row * cellHeight;
+
+                        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        line.setAttribute('x1', x1);
+                        line.setAttribute('y1', y);
+                        line.setAttribute('x2', x2);
+                        line.setAttribute('y2', y);
+                        line.setAttribute('stroke', state.gridLineColor);
+                        line.setAttribute('stroke-width', state.gridStroke);
+                        svg.appendChild(line);
+                    }
+                }
+
+                // Draw vertical lines, skipping between merged cells
+                for (let col = 1; col < state.gridWidth; col++) {
+                    for (let row = 0; row < state.gridHeight; row++) {
+                        const leftCell = row * state.gridWidth + (col - 1);
+                        const rightCell = row * state.gridWidth + col;
+
+                        // Skip line if both cells are in same merge group
+                        const leftGroup = getMergeCellGroup(leftCell);
+                        const rightGroup = getMergeCellGroup(rightCell);
+                        if (leftGroup && rightGroup && leftGroup === rightGroup) continue;
+
+                        // Draw line segment
+                        const x = col * cellWidth;
+                        const y1 = row * cellHeight;
+                        const y2 = (row + 1) * cellHeight;
+
+                        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        line.setAttribute('x1', x);
+                        line.setAttribute('y1', y1);
+                        line.setAttribute('x2', x);
+                        line.setAttribute('y2', y2);
+                        line.setAttribute('stroke', state.gridLineColor);
+                        line.setAttribute('stroke-width', state.gridStroke);
+                        svg.appendChild(line);
+                    }
+                }
+            }
+
+            document.getElementById('gridInfo').textContent = `Grid: ${state.gridWidth}x${state.gridHeight}`;
+        }
+
+        function saveToHistory() {
+            historyIndex++;
+            if (historyIndex < history.length) {
+                history.length = historyIndex;
+            }
+            // mergeCells is already an array, so just serialize directly
+            history.push(JSON.parse(JSON.stringify(state)));
+            updateHistoryList();
+        }
+
+        function restoreStateFromHistory(entry) {
+            state = JSON.parse(JSON.stringify(entry));
+            // mergeCells is an array, no conversion needed
+        }
+
+        function undo() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                restoreStateFromHistory(history[historyIndex]);
+                updateColorPicker();
+                updateGridSelector();
+                updatePattern();
+                updateHistoryList();
+            }
+        }
+
+        function redo() {
+            if (historyIndex < history.length - 1) {
+                historyIndex++;
+                restoreStateFromHistory(history[historyIndex]);
+                updateColorPicker();
+                updateGridSelector();
+                updatePattern();
+                updateHistoryList();
+            }
+        }
+
+        function updateHistoryList() {
+            const list = document.getElementById('historyList');
+            list.innerHTML = '';
+            history.forEach((h, i) => {
+                const item = document.createElement('div');
+                item.className = 'history-item' + (i === historyIndex ? ' current' : '');
+                item.textContent = 'State ' + (i + 1);
+                item.addEventListener('click', () => {
+                    historyIndex = i;
+                    restoreStateFromHistory(history[historyIndex]);
+                    updateColorPicker();
+                    updateGridSelector();
+                    updatePattern();
+                    updateHistoryList();
+                });
+                list.appendChild(item);
+            });
+        }
+
+        function clearCanvas() {
+            svg.innerHTML = '';
+            const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            bg.setAttribute('width', 1024);
+            bg.setAttribute('height', 576);
+            bg.setAttribute('fill', state.backgroundColor);
+            svg.appendChild(bg);
+            saveToHistory();
+        }
+
+        function resetState() {
+            state = {
+                algorithm: 'perlin',
+                seed: 12345,
+                complexity: 5,
+                gridWidth: 8,
+                gridHeight: 6,
+                cellVariation: 0,
+                colorCount: 5,
+                colors: ['#FFFDC9', '#FFFAA5', '#FFED4E', '#FFD700', '#F0C000'],
+                backgroundColor: '#ffffff',
+                gridLineColor: '#ffffff',
+                gridLines: true,
+                gridStroke: 0.5,
+                mergedCells: new Set()
+            };
+            selectedCells.clear();
+            document.getElementById('algorithm').value = 'perlin';
+            document.getElementById('seed').value = 12345;
+            document.getElementById('complexity').value = 5;
+            document.getElementById('complexityVal').textContent = '5';
+            document.getElementById('gridWidthSlider').value = 8;
+            document.getElementById('gridWidthVal').textContent = '8';
+            document.getElementById('gridHeightSlider').value = 6;
+            document.getElementById('gridHeightVal').textContent = '6';
+            document.getElementById('cellVariation').value = 0;
+            document.getElementById('cellVariationVal').textContent = '0%';
+            document.getElementById('gridStroke').value = 0.5;
+            document.getElementById('gridStrokeVal').textContent = '0.5px';
+            document.getElementById('gridLineColor').value = '#ffffff';
+            document.getElementById('gridLineColorText').value = '#ffffff';
+            document.getElementById('backgroundColor').value = '#ffffff';
+            document.getElementById('bgColorText').value = '#ffffff';
+            document.getElementById('colorCount').value = 5;
+            document.getElementById('colorCountVal').textContent = '5';
+            document.getElementById('gridLinesCheck').checked = true;
+            updateColorPicker();
+            updateGridSelector();
+            updatePattern();
+        }
+
+        function randomizeAll() {
+            const algorithms = ['perlin', 'voronoi', 'cellular', 'wave', 'fractal', 'grid', 'radial', 'spiral', 'noise', 'stripes', 'checkerboard', 'diamond', 'rings', 'random', 'turbulence', 'marble', 'wood', 'plasma', 'strata', 'wave2', 'sine'];
+
+            state.algorithm = algorithms[Math.floor(Math.random() * algorithms.length)];
+            state.seed = Math.floor(Math.random() * 1000000);
+            state.complexity = Math.floor(Math.random() * 6) + 5;
+            state.gridWidth = Math.floor(Math.random() * 20) + 4;
+            state.gridHeight = Math.floor(Math.random() * 16) + 3;
+            state.cellVariation = Math.floor(Math.random() * 100);
+            state.colorCount = Math.floor(Math.random() * 7) + 2;
+            state.mergeCells = [];
+            selectedCells.clear();
+
+            randomizeColors();
+
+            document.getElementById('algorithm').value = state.algorithm;
+            document.getElementById('seed').value = state.seed;
+            document.getElementById('complexity').value = state.complexity;
+            document.getElementById('complexityVal').textContent = state.complexity;
+            document.getElementById('gridWidthSlider').value = state.gridWidth;
+            document.getElementById('gridWidthVal').textContent = state.gridWidth;
+            document.getElementById('gridHeightSlider').value = state.gridHeight;
+            document.getElementById('gridHeightVal').textContent = state.gridHeight;
+            document.getElementById('cellVariation').value = state.cellVariation;
+            document.getElementById('cellVariationVal').textContent = state.cellVariation + '%';
+            document.getElementById('colorCount').value = state.colorCount;
+            document.getElementById('colorCountVal').textContent = state.colorCount;
+
+            updateColorPicker();
+            updateGridSelector();
+            updatePattern();
+            saveToHistory();
+        }
+
+        function randomizeDimensions() {
+            state.gridWidth = Math.floor(Math.random() * 20) + 4;
+            state.gridHeight = Math.floor(Math.random() * 16) + 3;
+
+            document.getElementById('gridWidthSlider').value = state.gridWidth;
+            document.getElementById('gridWidthVal').textContent = state.gridWidth;
+            document.getElementById('gridHeightSlider').value = state.gridHeight;
+            document.getElementById('gridHeightVal').textContent = state.gridHeight;
+
+            updateGridSelector();
+            updatePattern();
+            saveToHistory();
+        }
+
+        function generatePaletteFromColor() {
+            const baseColorInput = document.getElementById('baseColor').value;
+            const baseColor = hexToHsl(baseColorInput);
+
+            state.colors = [];
+
+            for (let i = 0; i < state.colorCount; i++) {
+                let hue = baseColor.h;
+                let saturation = baseColor.s;
+                let lightness = baseColor.l;
+
+                if (state.colorCount > 1) {
+                    const step = i / (state.colorCount - 1);
+                    hue = (baseColor.h + (step * 60 - 30)) % 360;
+                    saturation = Math.max(10, Math.min(90, baseColor.s + (step * 40 - 20)));
+                    lightness = Math.max(15, Math.min(85, baseColor.l + (step * 50 - 25)));
+                }
+
+                state.colors.push(hslToHex(hue, saturation, lightness));
+            }
+
+            updateColorPicker();
+            updatePattern();
+            saveToHistory();
+        }
+
+        function hexToHsl(hex) {
+            const r = parseInt(hex.slice(1, 3), 16) / 255;
+            const g = parseInt(hex.slice(3, 5), 16) / 255;
+            const b = parseInt(hex.slice(5, 7), 16) / 255;
+
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+
+            if (max === min) {
+                h = s = 0;
+            } else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+
+                switch (max) {
+                    case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+                    case g: h = ((b - r) / d + 2) / 6; break;
+                    case b: h = ((r - g) / d + 4) / 6; break;
+                }
+            }
+
+            return {
+                h: Math.round(h * 360),
+                s: Math.round(s * 100),
+                l: Math.round(l * 100)
+            };
+        }
+
+        function exportSVG() {
+            const width = parseInt(document.getElementById('exportWidth').value);
+            const height = parseInt(document.getElementById('exportHeight').value);
+
+            const svgString = `<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 1024 576" width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+  ${svg.innerHTML}
+</svg>`;
+
+            const blob = new Blob([svgString], { type: 'image/svg+xml' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'pattern.svg';
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+
+        async function exportPNG() {
+            const width = parseInt(document.getElementById('exportWidth').value);
+            const height = parseInt(document.getElementById('exportHeight').value);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+
+            const svgString = new XMLSerializer().serializeToString(svg);
+            const img = new Image();
+            img.onload = () => {
+                ctx.drawImage(img, 0, 0, width, height);
+                const link = document.createElement('a');
+                link.href = canvas.toDataURL('image/png');
+                link.download = 'pattern.png';
+                link.click();
+            };
+            img.src = 'data:image/svg+xml;base64,' + btoa(svgString);
+        }
+
+        function copyToClipboard() {
+            const svgString = new XMLSerializer().serializeToString(svg);
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                canvas.toBlob(blob => {
+                    navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                });
+            };
+            img.src = 'data:image/svg+xml;base64,' + btoa(svgString);
+        }
+
+        init();
+    </script>
+</body>
+</html>
