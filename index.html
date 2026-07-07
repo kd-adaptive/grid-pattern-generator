@@ -449,6 +449,15 @@
                     </div>
                 </div>
 
+                <div class="control-section">
+                    <label class="control-label">Cell Threshold (Random)</label>
+                    <div class="control-row">
+                        <input type="range" id="randomThreshold" min="0" max="100" value="0">
+                        <span class="value-label" id="randomThresholdVal">0%</span>
+                    </div>
+                    <p class="info-text">Randomly removes cells from outside moving inward</p>
+                </div>
+
             </div>
 
             <!-- Grid Tab -->
@@ -491,7 +500,7 @@
                 <div class="control-section">
                     <label class="control-label">Grid Line Stroke</label>
                     <div class="control-row">
-                        <input type="range" id="gridStroke" min="0.1" max="3" step="0.1" value="0.5">
+                        <input type="range" id="gridStroke" min="0.1" max="15" step="0.1" value="0.5">
                         <span class="value-label" id="gridStrokeVal">0.5px</span>
                     </div>
                 </div>
@@ -568,6 +577,11 @@
                 </div>
 
                 <div class="control-section">
+                    <label class="control-label">Color Transparency</label>
+                    <div id="colorTransparencyControls" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                </div>
+
+                <div class="control-section">
                     <label class="control-label">Background</label>
                     <div class="control-row">
                         <input type="color" id="backgroundColor" value="#ffffff">
@@ -627,10 +641,12 @@
             cellVariation: 0,
             colorCount: 5,
             colors: ['#FFFDC9', '#FFFAA5', '#FFED4E', '#FFD700', '#F0C000'],
+            colorAlphas: [1, 1, 1, 1, 1],  // Transparency for each color (0-1)
             backgroundColor: '#ffffff',
             gridLineColor: '#ffffff',
             gridLines: true,
             gridStroke: 0.5,
+            randomThreshold: 0,  // Random cell elimination from outside moving inward
             mergeCells: []  // Array of {mainCell, cells: []}
         };
 
@@ -671,6 +687,12 @@
             document.getElementById('randomSeedBtn').addEventListener('click', () => {
                 state.seed = Math.floor(Math.random() * 1000000);
                 document.getElementById('seed').value = state.seed;
+                updatePattern();
+            });
+
+            document.getElementById('randomThreshold').addEventListener('input', (e) => {
+                state.randomThreshold = parseInt(e.target.value);
+                document.getElementById('randomThresholdVal').textContent = state.randomThreshold + '%';
                 updatePattern();
             });
 
@@ -812,6 +834,56 @@
                 });
                 picker.appendChild(swatch);
             });
+
+            // Update transparency controls
+            updateTransparencyControls();
+        }
+
+        function updateTransparencyControls() {
+            const container = document.getElementById('colorTransparencyControls');
+            container.innerHTML = '';
+            const displayColors = state.colors.slice(0, state.colorCount);
+
+            displayColors.forEach((color, i) => {
+                const alpha = state.colorAlphas[i] !== undefined ? state.colorAlphas[i] : 1;
+                const row = document.createElement('div');
+                row.style.display = 'flex';
+                row.style.gap = '8px';
+                row.style.alignItems = 'center';
+
+                const swatch = document.createElement('div');
+                swatch.style.width = '24px';
+                swatch.style.height = '24px';
+                swatch.style.backgroundColor = color;
+                swatch.style.borderRadius = '2px';
+                swatch.style.border = '1px solid #333';
+
+                const slider = document.createElement('input');
+                slider.type = 'range';
+                slider.min = '0';
+                slider.max = '100';
+                slider.value = Math.round(alpha * 100);
+                slider.style.flex = '1';
+                slider.style.height = '4px';
+
+                const label = document.createElement('span');
+                label.style.fontSize = '11px';
+                label.style.color = '#4a9eff';
+                label.style.minWidth = '30px';
+                label.textContent = Math.round(alpha * 100) + '%';
+
+                slider.addEventListener('input', (e) => {
+                    const newAlpha = parseInt(e.target.value) / 100;
+                    state.colorAlphas[i] = newAlpha;
+                    label.textContent = e.target.value + '%';
+                    updatePattern();
+                });
+
+                row.appendChild(swatch);
+                row.appendChild(slider);
+                row.appendChild(label);
+                container.appendChild(row);
+            });
         }
 
         function updateGridSelector() {
@@ -906,7 +978,7 @@
             return Math.sin(x * 12.9898 + y * 78.233 + seed * 43758.5453) * 0.5 + 0.5;
         }
 
-        function getColorForCell(cellIndex) {
+        function getColorIndexForCell(cellIndex) {
             const width = state.gridWidth;
             const height = state.gridHeight;
             const row = Math.floor(cellIndex / width);
@@ -977,6 +1049,11 @@
 
             const colorCount = Math.min(state.colorCount, state.colors.length);
             const colorIndex = Math.floor(Math.min(value, 0.999) * colorCount);
+            return colorIndex;
+        }
+
+        function getColorForCell(cellIndex) {
+            const colorIndex = getColorIndexForCell(cellIndex);
             return state.colors[colorIndex];
         }
 
@@ -1027,12 +1104,43 @@
                         const width = (maxCol - minCol + 1) * cellWidth;
                         const height = (maxRow - minRow + 1) * cellHeight;
 
+                        // Calculate opacity for merged cell (use center position)
+                        let opacity = 1;
+                        const centerCol = state.gridWidth / 2;
+                        const centerRow = state.gridHeight / 2;
+                        const cellCenterCol = (minCol + maxCol) / 2;
+                        const cellCenterRow = (minRow + maxRow) / 2;
+                        const distCol = Math.abs(cellCenterCol - centerCol);
+                        const distRow = Math.abs(cellCenterRow - centerRow);
+                        const maxDist = Math.max(centerCol, centerRow);
+                        const distance = (Math.max(distCol, distRow)) / maxDist;
+
+                        if (state.randomThreshold > 0) {
+                            const randomThresholdNormalized = state.randomThreshold / 100;
+                            const rand1 = Math.sin(minCol * 12.9898 + minRow * 78.233 + state.seed * 43758.5453) * 0.5 + 0.5;
+                            const rand2 = Math.cos(minCol * 45.164 + minRow * 94.673 + state.randomThreshold * 234.567) * 0.5 + 0.5;
+                            const rand3 = Math.sin(minCol * 73.421 + minRow * 12.456 + state.randomThreshold * 876.543) * 0.5 + 0.5;
+                            const randomVal = (rand1 * 0.4 + rand2 * 0.35 + rand3 * 0.25) % 1;
+                            const eliminationThreshold = distance * randomThresholdNormalized;
+                            if (randomVal < eliminationThreshold) {
+                                opacity = 0;
+                            }
+                        }
+
+                        // Apply per-color transparency
+                        const colorIndex = getColorIndexForCell(mergeGroup.mainCell);
+                        const colorAlpha = state.colorAlphas[colorIndex] !== undefined ? state.colorAlphas[colorIndex] : 1;
+                        opacity *= colorAlpha;
+
                         const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
                         rect.setAttribute('x', x);
                         rect.setAttribute('y', y);
                         rect.setAttribute('width', width);
                         rect.setAttribute('height', height);
                         rect.setAttribute('fill', mainColor);
+                        if (opacity < 1) {
+                            rect.setAttribute('opacity', opacity.toFixed(2));
+                        }
 
                         svg.appendChild(rect);
 
@@ -1044,12 +1152,42 @@
                         const y = row * cellHeight;
                         const color = getColorForCell(cellIndex);
 
+                        // Calculate opacity based on threshold and position
+                        let opacity = 1;
+                        const centerCol = state.gridWidth / 2;
+                        const centerRow = state.gridHeight / 2;
+                        const distCol = Math.abs(col - centerCol);
+                        const distRow = Math.abs(row - centerRow);
+                        const maxDist = Math.max(centerCol, centerRow);
+                        const distance = (Math.max(distCol, distRow)) / maxDist;
+
+                        if (state.randomThreshold > 0) {
+                            // Apply random threshold - randomly remove cells from outside moving inward
+                            const randomThresholdNormalized = state.randomThreshold / 100;
+                            const rand1 = Math.sin(col * 12.9898 + row * 78.233 + state.seed * 43758.5453) * 0.5 + 0.5;
+                            const rand2 = Math.cos(col * 45.164 + row * 94.673 + state.randomThreshold * 234.567) * 0.5 + 0.5;
+                            const rand3 = Math.sin(col * 73.421 + row * 12.456 + state.randomThreshold * 876.543) * 0.5 + 0.5;
+                            const randomVal = (rand1 * 0.4 + rand2 * 0.35 + rand3 * 0.25) % 1;
+                            const eliminationThreshold = distance * randomThresholdNormalized;
+                            if (randomVal < eliminationThreshold) {
+                                opacity = 0;
+                            }
+                        }
+
+                        // Apply per-color transparency
+                        const colorIndex = getColorIndexForCell(cellIndex);
+                        const colorAlpha = state.colorAlphas[colorIndex] !== undefined ? state.colorAlphas[colorIndex] : 1;
+                        opacity *= colorAlpha;
+
                         const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
                         rect.setAttribute('x', x);
                         rect.setAttribute('y', y);
                         rect.setAttribute('width', cellWidth);
                         rect.setAttribute('height', cellHeight);
                         rect.setAttribute('fill', color);
+                        if (opacity < 1) {
+                            rect.setAttribute('opacity', opacity.toFixed(2));
+                        }
 
                         svg.appendChild(rect);
                         renderedCells.add(cellIndex);
@@ -1192,11 +1330,13 @@
                 cellVariation: 0,
                 colorCount: 5,
                 colors: ['#FFFDC9', '#FFFAA5', '#FFED4E', '#FFD700', '#F0C000'],
+                colorAlphas: [1, 1, 1, 1, 1],
                 backgroundColor: '#ffffff',
                 gridLineColor: '#ffffff',
                 gridLines: true,
                 gridStroke: 0.5,
-                mergedCells: new Set()
+                randomThreshold: 0,
+                mergeCells: []
             };
             selectedCells.clear();
             document.getElementById('algorithm').value = 'perlin';
@@ -1217,6 +1357,8 @@
             document.getElementById('bgColorText').value = '#ffffff';
             document.getElementById('colorCount').value = 5;
             document.getElementById('colorCountVal').textContent = '5';
+            document.getElementById('randomThreshold').value = 0;
+            document.getElementById('randomThresholdVal').textContent = '0%';
             document.getElementById('gridLinesCheck').checked = true;
             updateColorPicker();
             updateGridSelector();
